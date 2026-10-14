@@ -24,9 +24,9 @@ export interface Detail {
 
 export interface StreamLink {
   server: string;
-  quality: number | null; // 1080, 720, ... atau null kalau tidak diketahui
+  quality: number | null;
+  format: "mp4" | "mkv" | null;
   url: string;
-  // direct = bisa diputar langsung, embed = halaman/embed host pihak ketiga
   type: "direct" | "embed";
   referer?: string;
 }
@@ -35,7 +35,7 @@ export interface Source {
   id: string;
   name: string;
   mainUrl: string;
-  sections: Record<string, string>; // key -> label
+  sections: Record<string, string>;
   home(section: string, page: number): Promise<ListItem[]>;
   search(query: string): Promise<ListItem[]>;
   detail(url: string): Promise<Detail>;

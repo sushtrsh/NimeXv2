@@ -66,7 +66,6 @@ export const otakudesu: Source = {
     const year = yearText.match(/\d, (\d*)/)?.[1];
 
     const lists = Array.from(doc.querySelectorAll("div.episodelist"));
-    // index 0 = batch, index 1 = daftar episode (sama seperti plugin aslinya)
     const list = lists.length > 1 ? lists[1] : lists[0];
     const episodes: Episode[] = [];
     for (const li of Array.from(list?.querySelectorAll("ul > li") ?? [])) {
@@ -97,25 +96,34 @@ export const otakudesu: Source = {
     const out: StreamLink[] = [];
 
     for (const li of Array.from(doc.querySelectorAll("div.download li"))) {
-      const quality = qualityOf(text(li.querySelector("strong")));
+      const label = text(li.querySelector("strong"));
+      const quality = qualityOf(label);
 
+      // Pass 1: resolve semua link di baris ini
+      const resolved: { server: string; url: string }[] = [];
       for (const a of Array.from(li.querySelectorAll("a[href]"))) {
         let href = attr(a, "href");
         if (!href) continue;
         const server = text(a) || "Download";
-
-        // link.desustream.com = redirect, ikuti sekali untuk dapat URL asli
         if (hostIs(href, "desustream.com")) {
           const real = await resolveRedirect(href).catch(() => null);
           if (!real) continue;
           href = real;
         }
-        const url = new URL(href, mainUrl).toString();
+        resolved.push({ server, url: new URL(href, mainUrl).toString() });
+      }
 
+      // Format: dari label dulu, kalau tidak ada dari nama file Acefile
+      const ace = resolved.find((r) => hostIs(r.url, "acefile.co"))?.url ?? "";
+      const fmtSrc = `${label} ${ace}`;
+      const format: "mp4" | "mkv" | null = /mkv/i.test(fmtSrc) ? "mkv" : /mp4/i.test(fmtSrc) ? "mp4" : null;
+
+      // Pass 2: klasifikasi
+      for (const { server, url } of resolved) {
         const isDirect =
           /\.(mp4|mkv|webm|m3u8)(\?|$)/i.test(url) || url.toLowerCase().includes("pixeldrain.com/api/file/");
         if (isDirect) {
-          out.push({ server, quality, url, type: "direct", referer: episodeUrl });
+          out.push({ server, quality, format, url, type: "direct", referer: episodeUrl });
           continue;
         }
 
@@ -125,6 +133,7 @@ export const otakudesu: Source = {
             out.push({
               server: "PixelDrain",
               quality,
+              format,
               url: `https://pixeldrain.com/api/file/${id}`,
               type: "direct",
               referer: url,
@@ -138,7 +147,7 @@ export const otakudesu: Source = {
             const kf = parse(await getHtml(url));
             const src = attr(kf.querySelector("source[src*=krakencloud], source[type='video/mp4']"), "src");
             if (src) {
-              out.push({ server: "KrakenFiles", quality, url: src, type: "direct", referer: url });
+              out.push({ server: "KrakenFiles", quality, format, url: src, type: "direct", referer: url });
               continue;
             }
           } catch {
@@ -146,8 +155,7 @@ export const otakudesu: Source = {
           }
         }
 
-        // Host lain: di CloudStream diserahkan ke loadExtractor. Di sini kita kembalikan apa adanya.
-        out.push({ server, quality, url, type: "embed", referer: episodeUrl });
+        out.push({ server, quality, format, url, type: "embed", referer: episodeUrl });
       }
     }
     return out;

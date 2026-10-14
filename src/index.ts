@@ -1,5 +1,6 @@
 import { sources } from "./sources";
 import { HttpError } from "./http";
+import { PLAYER_HTML } from "./player";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,10 @@ export default {
     const parts = u.pathname.split("/").filter(Boolean);
 
     try {
+      if (parts[0] === "player") {
+        return new Response(PLAYER_HTML, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+      }
+
       if (parts.length === 0 || parts[0] === "sources") {
         return json(
           Object.values(sources).map((s) => ({

@@ -1,7 +1,24 @@
 import { parseHTML } from "linkedom";
 
-export type Doc = Document;
-export type El = Element;
+// Tipe sendiri (tanpa bergantung pada lib DOM), supaya tidak bentrok
+// dengan tipe Element milik @cloudflare/workers-types (HTMLRewriter).
+export interface DomNode {
+  nodeType: number;
+  textContent: string | null;
+}
+
+export interface El {
+  textContent: string | null;
+  childNodes: ArrayLike<DomNode>;
+  getAttribute(name: string): string | null;
+  querySelector(selector: string): El | null;
+  querySelectorAll(selector: string): ArrayLike<El>;
+}
+
+export interface Doc {
+  querySelector(selector: string): El | null;
+  querySelectorAll(selector: string): ArrayLike<El>;
+}
 
 export function parse(html: string): Doc {
   return parseHTML(html).document as unknown as Doc;
