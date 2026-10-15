@@ -24,11 +24,11 @@ export default {
     const parts = u.pathname.split("/").filter(Boolean);
 
     try {
-      if (parts[0] === "player") {
+      if (parts.length === 0 || parts[0] === "player") {
         return new Response(PLAYER_HTML, { headers: { "Content-Type": "text/html; charset=utf-8" } });
       }
 
-      if (parts.length === 0 || parts[0] === "sources") {
+      if (parts[0] === "sources") {
         return json(
           Object.values(sources).map((s) => ({
             id: s.id,
